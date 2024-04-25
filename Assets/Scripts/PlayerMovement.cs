@@ -5,18 +5,26 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Variables")]
-    public float moveSpeed = 5.0f;
-    public float friction = 5.0f;
+    public float walkSpeed = 1f;
+    public float walkMaxSpeed = 1f;
+
+    public float runSpeed = 2f;
+    public float runMaxSpeed = 2f;
+
+    public float acceleration = 50.0f;
+    public float deceleration = 100.0f;
 
     [Header("References")]
     private Rigidbody rb;
+
+    public string currentState = "Idle";
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
 
-        //Lock axis so it can't fall over
-        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        //Lock the constraints for the mean time to track
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
     }
 
     void Update()
@@ -27,13 +35,20 @@ public class PlayerMovement : MonoBehaviour
         Vector3 moveDirection = new Vector3(x, 0, z);
         moveDirection.Normalize();
 
-        moveDirection = Quaternion.Euler(0, 0, 0) * moveDirection;
+        float speed = moveDirection.magnitude > 0 ? (Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed) : 0f;
+        float maxSpeed = moveDirection.magnitude > 0 ? (Input.GetKey(KeyCode.LeftShift) ? runMaxSpeed : walkMaxSpeed) : 0f;
 
-        rb.velocity = moveDirection * moveSpeed;
-    }
+        rb.velocity += moveDirection * acceleration * speed * Time.deltaTime;
+        rb.velocity = Vector3.ClampMagnitude(rb.velocity, maxSpeed);
 
-    void FixedUpdate()
-    {
-        rb.velocity -= rb.velocity * friction * Time.fixedDeltaTime;
+        if (moveDirection.magnitude > 0)
+        {
+            currentState = Input.GetKey(KeyCode.LeftShift) ? "Running" : "Walking";
+        }
+        else
+        {
+            currentState = "Idle";
+            rb.velocity -= rb.velocity * deceleration * Time.deltaTime;
+        }
     }
 }
